@@ -1,0 +1,49 @@
+# --- Identification & Metadata ---
+app_name         = "customer"
+environment      = "dev"
+primary_region   = "us-east-1"
+secondary_region = "us-east-2"
+
+# --- Shared Networking Discovery ---
+# This matches the path created by your infra-core main.tf
+network_ssm_prefix = "/infra/dev"
+availability_zones = ["us-east-1a", "us-east-1b"]
+
+# --- Edge & Security (Route53 / CloudFront / WAF) ---
+domain_name         = "customer-dev.example.com"
+acm_certificate_arn = "arn:aws:acm:us-east-1:123456789012:certificate/uuid"
+waf_enabled         = true
+
+# --- Compute (ECS Fargate & ALB) ---
+# Keeping counts as multiples of 2 for your 2 AZs
+desired_count    = 4    # Standard operation (2 per AZ)
+min_count        = 2    # Minimum (1 per AZ)
+max_count        = 12   # Peak scaling limit (6 per AZ)
+
+cpu_units        = 512  # 0.5 vCPU
+memory_limit     = 1024 # 1 GB
+container_port   = 8080
+container_image  = "123456789012.dkr.ecr.us-east-1.amazonaws.com/customer-backend:dev-latest"
+
+# Scaling Triggers
+cpu_threshold    = 70
+memory_threshold = 80
+
+# --- Data Layer: RDS (Postgres/MySQL) ---
+db_name               = "customer_dev_db"
+db_engine             = "postgres"
+db_engine_version     = "15.4"
+db_instance_class     = "db.r5.large"
+db_allocated_storage  = 100
+db_max_storage        = 500  # Enables Storage Autoscaling
+
+# High Availability & Disaster Recovery
+multi_az              = true  # Primary Standby in AZ2 (us-east-1)
+enable_dr_replica     = true  # DR Replica in us-east-2
+dr_instance_class     = "db.t3.medium"
+
+# --- Data Layer: Redis (ElastiCache) ---
+redis_node_type          = "cache.t3.small"
+redis_engine_version     = "7.1"
+redis_num_cache_clusters = 2     # 1 Primary + 1 Replica across your 2 AZs
+redis_multi_az_enabled   = true
