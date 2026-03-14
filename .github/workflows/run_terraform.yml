@@ -3,7 +3,6 @@ name: App Infrastructure Deploy
 on:
   push:
     branches: [ main ]
-    # The workflow ONLY starts if a file in these paths changes
     paths:
       - 'modules/**'
       - 'environments/dev/ecommerce/**'
@@ -20,6 +19,7 @@ on:
       - 'environments/dev/ciam/**'
 
 jobs:
+  # STEP 1: Detect which folders changed
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -30,7 +30,6 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          # This filter decides WHICH matrix jobs to run
           filters: |
             ecommerce: 
               - 'modules/**'
@@ -45,41 +44,39 @@ jobs:
               - 'modules/**'
               - 'environments/dev/ciam/**'
 
+  # STEP 2: Run Terraform for each changed app
   terraform:
     needs: changes
-    # Only run if at least one app filter matched
     if: ${{ needs.changes.outputs.apps != '[]' && needs.changes.outputs.apps != '' }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         app: ${{ fromJSON(needs.changes.outputs.apps) }}
 
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-1
-          mask-aws-account-id: true
+          terraform_wrapper: false
 
-      - name: Create Temporary AWS Profile
+      - name: Create AWS Profile
         run: |
           mkdir -p ~/.aws
+          
+          # Create the Config file (Note the 'profile' prefix)
           cat <<EOF > ~/.aws/config
           [profile secondary-account]
           region = ap-southeast-1
           output = json
           EOF
-          
+
+          # Create the Credentials file (Note: NO 'profile' prefix here)
           cat <<EOF > ~/.aws/credentials
-          [profile secondary-account]
+          [secondary-account]
           aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           EOF
@@ -87,12 +84,16 @@ jobs:
       - name: Terraform Init & Plan
         env:
           APP_PATH: "environments/dev/${{ matrix.app }}"
-          AWS_PROFILE: secondary-account
+          # We unset these to force Terraform to look at our created profile
+          AWS_ACCESS_KEY_ID: ""
+          AWS_SECRET_ACCESS_KEY: ""
         run: |
-          # Check if the directory exists before moving into it
           if [ -d "$APP_PATH" ]; then
+            echo "Changing directory to $APP_PATH"
             cd $APP_PATH
-            terraform init
+          
+            # Using -reconfigure to force a fresh backend check with the new profile
+            terraform init -reconfigure
             terraform plan -no-color
           else
             echo "Directory $APP_PATH not found. Skipping."
