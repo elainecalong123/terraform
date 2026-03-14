@@ -17,9 +17,9 @@ module "iam" {
   source   = "../../../modules/iam"
   env      = var.env
   app_name = var.app_name
-  redis_cluster_arn =  module.data.redis_arn
-  primary_db_arn    =  module.data.db_arn
-  dr_db_arn         =  module.data.dr_db_arn
+  redis_cluster_arn =  data.terraform_remote_state.common.outputs.redis_arn
+  primary_db_arn    =  data.terraform_remote_state.common.outputs.db_arn
+  dr_db_arn         =  data.terraform_remote_state.common.outputs.dr_db_arn
 }
 
 # 3. Security (Firewalls)
@@ -48,59 +48,33 @@ module "storage" {
   cloudfront_arn = module.edge.cloudfront_arn
 }
 
-# 5. Data (RDS & Redis)
-module "data" {
-  source = "../../../modules/data"
-
-  providers = {
-    aws           = aws            # Singapore
-    aws.dr_region = aws.dr_region  # Sydney
-  }
-
-  env                = var.env
-  app_name        = var.app_name
-
-  vpc_id = data.terraform_remote_state.common.outputs.primary_vpc_id
-  db_security_group_id = module.security.db_sg_id
-  dr_db_security_group_id = module.security.db_sg_id
-
-  # Primary DB Subnets (Singapore)
-  db_subnet_ids    = data.terraform_remote_state.common.outputs.primary_database_subnet_ids
-
-  # DR DB Subnets (Sydney)
-  dr_db_subnet_ids = data.terraform_remote_state.common.outputs.dr_database_subnet_ids
-}
-
-# 6. Compute (ALB & ECS)
+# 5. Compute (ALB & ECS)
 module "compute" {
   source = "../../../modules/compute"
 
-  env             = var.env
-  app_name        = var.app_name
-  container_image = var.container_image
-  vpc_id          = data.terraform_remote_state.common.outputs.primary_vpc_id
-  public_subnet_ids  = data.terraform_remote_state.common.outputs.primary_public_subnets
-  private_subnet_ids = data.terraform_remote_state.common.outputs.primary_private_subnets
+  env                    = var.env
+  app_name               = var.app_name
+  container_image        = var.container_image
+  vpc_id                 = data.terraform_remote_state.common.outputs.primary_vpc_id
+  public_subnet_ids      = data.terraform_remote_state.common.outputs.primary_public_subnets
+  private_subnet_ids     = data.terraform_remote_state.common.outputs.primary_private_subnets
 
-  alb_sg_id           = module.security.alb_sg_id
-  ecs_sg_id           = module.security.ecs_sg_id
-  execution_role_arn  = module.iam.execution_role_arn
-  task_role_arn       = module.iam.task_role_arn
-  acm_certificate_arn     = module.certificate.certificate_arn
-  db_host               = module.data.db_host
-  redis_host            = module.data.redis_host
+  alb_sg_id              = module.security.alb_sg_id
+  ecs_sg_id              = module.security.ecs_sg_id
+  execution_role_arn     = module.iam.execution_role_arn
+  task_role_arn          = module.iam.task_role_arn
+  acm_certificate_arn    = module.certificate.certificate_arn
+  db_host                = data.terraform_remote_state.common.outputs.db_host
+  redis_host             = data.terraform_remote_state.common.outputs.redis_host
 }
 
-# 7. Edge (CloudFront CDN)
+# 6. Edge (CloudFront CDN)
 module "edge" {
   source = "../../../modules/edge"
   domain_name = var.domain_name
 
   env             = var.env
   app_name        = var.app_name
-  vpc_id = data.terraform_remote_state.common.outputs.primary_vpc_id
-  redis_primary_endpoint = module.data.redis_host
-  rds_primary_endpoint =  module.data.db_host
   alb_dns_name    = module.compute.alb_dns_name
   s3_bucket_regional_domain_name    = module.storage.s3_bucket_regional_domain_name
   acm_certificate_arn = module.certificate.certificate_arn
