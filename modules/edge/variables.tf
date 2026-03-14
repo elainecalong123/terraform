@@ -10,11 +10,6 @@ variable "app_name" {
 }
 
 # --- VPC & Networking ---
-variable "vpc_id" {
-  description = "The ID of the Primary VPC (Singapore) for the Private Hosted Zone"
-  type        = string
-}
-
 variable "public_zone_id" {
   description = "The Route 53 Public Hosted Zone ID for your domain"
   type        = string
@@ -33,16 +28,6 @@ variable "alb_dns_name" {
 
 variable "s3_bucket_regional_domain_name" {
   description = "The regional DNS name of the S3 bucket from the storage module"
-  type        = string
-}
-
-variable "rds_primary_endpoint" {
-  description = "The address/endpoint of the primary RDS instance"
-  type        = string
-}
-
-variable "redis_primary_endpoint" {
-  description = "The primary endpoint address for the Redis cluster"
   type        = string
 }
 

@@ -22,7 +22,7 @@ resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
   port              = "443"
   protocol          = "HTTPS"
-  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06" # Modern TLS
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = var.acm_certificate_arn
 
   default_action {
@@ -47,17 +47,17 @@ resource "aws_lb_listener" "http_redirect" {
   }
 }
 
-# 4. Target Group
+# 4. Target Group (UPDATED FOR TLS)
 resource "aws_lb_target_group" "app" {
   name        = "${var.app_name}-${var.env}-tg"
-  port        = var.container_port
-  protocol    = "HTTP" # Traffic from ALB to ECS is usually HTTP inside the VPC
+  port        = 443      # Changed to secure port
+  protocol    = "HTTPS"  # FORCED RE-ENCRYPTION
   vpc_id      = var.vpc_id
   target_type = "ip"
 
   health_check {
-    path                = "/health" # Ensure your app has this endpoint
-    protocol            = "HTTP"
+    path                = "/health"
+    protocol            = "HTTPS" # Health check must also be secure
     matcher             = "200"
     interval            = 30
     timeout             = 5
@@ -66,7 +66,7 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
-# 5. ECS Task Definition
+# 5. ECS Task Definition (UPDATED FOR TLS)
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.app_name}-${var.env}"
   network_mode             = "awsvpc"
@@ -83,13 +83,15 @@ resource "aws_ecs_task_definition" "app" {
       essential = true
       portMappings = [
         {
-          containerPort = var.container_port
-          hostPort      = var.container_port
+          containerPort = 443 # Matching Target Group
+          hostPort      = 443
         }
       ]
       environment = [
         { name = "DB_HOST", value = var.db_host },
-        { name = "REDIS_HOST", value = var.redis_host }
+        { name = "REDIS_HOST", value = var.redis_host },
+        # FORCING DATABASE TLS CONNECTION
+        { name = "DB_SSL_MODE", value = "require" }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -119,11 +121,11 @@ resource "aws_ecs_service" "main" {
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
     container_name   = var.app_name
-    container_port   = var.container_port
+    container_port   = 443 # Updated to match container definition
   }
 }
 
-#7 ecs cluster
+# 7. ECS Cluster
 resource "aws_ecs_cluster" "this" {
   name = "${var.env}-${var.app_name}-cluster"
 

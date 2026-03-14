@@ -9,34 +9,6 @@ locals {
   s3_origin_id  = "${var.app_name}-s3-static"
 }
 
-# 1. INTERNAL DNS (Private Hosted Zone)
-# This is isolated inside your VPC for ECS-to-DB connectivity
-resource "aws_route53_zone" "internal" {
-  name = "${var.app_name}.internal"
-
-  vpc {
-    vpc_id = var.vpc_id
-  }
-
-  tags = local.common_tags
-}
-
-resource "aws_route53_record" "rds_internal" {
-  zone_id = aws_route53_zone.internal.zone_id
-  name    = "db.${var.app_name}.internal"
-  type    = "CNAME"
-  ttl     = "300"
-  records = [var.rds_primary_endpoint]
-}
-
-resource "aws_route53_record" "redis_internal" {
-  zone_id = aws_route53_zone.internal.zone_id
-  name    = "redis.${var.app_name}.internal"
-  type    = "CNAME"
-  ttl     = "300"
-  records = [var.redis_primary_endpoint]
-}
-
 # 2. CLOUDFRONT (Global HTTPS Edge)
 
 resource "aws_cloudfront_origin_access_control" "s3_oac" {

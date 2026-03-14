@@ -1,3 +1,8 @@
+# ==============================================================================
+# COMMON INFRASTRUCTURE - DEV ENVIRONMENT
+# Centralized Networking, DNS, and Shared RDS
+# ==============================================================================
+
 # 1. Primary VPC (Singapore)
 module "vpc_primary" {
   source = "../../../modules/networking"
@@ -5,7 +10,6 @@ module "vpc_primary" {
   env              = var.env
   vpc_cidr         = var.primary_vpc_cidr
   product_team     = var.product_team
-  # Using variables instead of hardcoded IPs
   public_subnets   = var.primary_public_subnets
   private_subnets  = var.primary_private_subnets
   database_subnets = var.primary_database_subnets
@@ -21,7 +25,6 @@ module "vpc_dr" {
   env              = var.env
   vpc_cidr         = var.dr_vpc_cidr
   product_team     = var.product_team
-  # Using variables for DR region
   public_subnets   = var.dr_public_subnets
   private_subnets  = var.dr_private_subnets
   database_subnets = var.dr_database_subnets
@@ -54,7 +57,6 @@ resource "aws_route53_zone" "main" {
     vpc_id = module.vpc_primary.vpc_id
   }
 
-  # Secondary VPC association for DR
   vpc {
     vpc_id     = module.vpc_dr.vpc_id
     vpc_region = "ap-southeast-2"
@@ -64,4 +66,38 @@ resource "aws_route53_zone" "main" {
     Name        = "Private-Zone"
     Environment = var.env
   }
+}
+
+# 5. Shared RDS Instance & Redis (Self-contained Data Layer)
+# Note: Security Module removed to allow per-app SG management
+module "data" {
+  source = "../../../modules/data"
+
+  providers = {
+    aws           = aws
+    aws.dr_region = aws.dr_region
+  }
+
+  env      = var.env
+  app_name = "shared-rds"
+
+  # Networking - Direct references
+  vpc_id           = module.vpc_primary.vpc_id
+  dr_vpc_id        = module.vpc_dr.vpc_id
+  primary_vpc_cidr = var.primary_vpc_cidr
+  vpn_cidr         = var.vpn_cidr
+
+  # Subnets
+  db_subnet_ids    = module.vpc_primary.database_subnet_ids
+  dr_db_subnet_ids = module.vpc_dr.database_subnet_ids
+
+  # DB Configurations (Variables)
+  db_engine               = var.db_engine
+  db_instance_class       = var.db_instance_class
+  db_username             = var.db_username
+  db_password             = var.db_password
+  db_allocated_storage    = var.db_allocated_storage
+
+  # Redis Configurations
+  redis_node_type      = var.redis_node_type
 }

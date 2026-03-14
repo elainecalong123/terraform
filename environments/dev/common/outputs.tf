@@ -61,3 +61,28 @@ output "dr_private_subnets" {
   description = "List of Private Subnet IDs in Sydney"
   value       = module.vpc_dr.private_subnet_ids
 }
+
+output "db_arn" {
+  description = "The ARN of the primary RDS instance (needed for DR replication)"
+  value       = module.data.db_arn
+}
+
+output "dr_db_arn" {
+  description = "The ARN of the DR RDS instance"
+  value       = module.data.dr_db_arn
+}
+
+output "redis_arn" {
+  description = "The ARN of the Redis replication group"
+  value       = module.data.redis_arn
+}
+
+output "db_host" {
+  description = "The hostname of the RDS primary instance"
+  value       = module.data.db_host
+}
+
+output "redis_host" {
+  description = "The hostname of the RDS dr instance"
+  value       = module.data.redis_host
+}

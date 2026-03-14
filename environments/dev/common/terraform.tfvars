@@ -1,5 +1,12 @@
 env              = "dev"
 domain_name = "cambridgelaine.com"
+vpn_cidr             = "10.0.0.0/16" # Replace with your actual VPN IP range
+db_username          = "bpo_admin"
+db_allocated_storage = 20
+db_instance_class    = "db.t3.micro"
+redis_node_type      = "cache.t3.micro"
+internal_domain_name = "cambridgelaine.internal"
+
 # Primary Region (Singapore)
 primary_vpc_cidr         = "10.0.0.0/16"
 primary_public_subnets   = ["10.0.1.0/24", "10.0.2.0/24"]
