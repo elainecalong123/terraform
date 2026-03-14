@@ -3,11 +3,13 @@ name: App Infrastructure Deploy
 on:
   push:
     branches: [ main ]
+    # The workflow ONLY starts if a file in these paths changes
     paths:
       - 'modules/**'
       - 'environments/dev/ecommerce/**'
       - 'environments/dev/crm/**'
       - 'environments/dev/web/**'
+      - 'environments/dev/ciam/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -18,16 +20,17 @@ on:
       - 'environments/dev/ciam/**'
 
 jobs:
-  # This job determines which apps need to be updated
   changes:
     runs-on: ubuntu-latest
     outputs:
       apps: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # This filter decides WHICH matrix jobs to run
           filters: |
             ecommerce: 
               - 'modules/**'
@@ -44,13 +47,13 @@ jobs:
 
   terraform:
     needs: changes
-    if: ${{ needs.changes.outputs.apps != '[]' }}
+    # Only run if at least one app filter matched
+    if: ${{ needs.changes.outputs.apps != '[]' && needs.changes.outputs.apps != '' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # This will only run for the apps that detected changes above
         app: ${{ fromJSON(needs.changes.outputs.apps) }}
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,9 +63,14 @@ jobs:
 
       - name: Terraform Init & Plan
         env:
-          # Mapping the matrix names to your actual directory paths
           APP_PATH: "environments/dev/${{ matrix.app }}"
         run: |
-          cd $APP_PATH
-          terraform init
-          terraform plan -no-color
+          # Check if the directory exists before moving into it
+          if [ -d "$APP_PATH" ]; then
+            cd $APP_PATH
+            terraform init
+            terraform plan -no-color
+          else
+            echo "Directory $APP_PATH not found. Skipping."
+            exit 1
+          fi
