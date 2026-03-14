@@ -16,7 +16,7 @@ resource "aws_acm_certificate" "this" {
   }
 }
 
-# 2. Create DNS Validation Records in Route53
+# 2. Create DNS Validation Records in Route 53
 # This logic loops through the domain validation options provided by ACM
 resource "aws_route53_record" "validation" {
   for_each = {
