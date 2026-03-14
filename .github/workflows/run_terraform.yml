@@ -70,17 +70,19 @@ jobs:
           mask-aws-account-id: true
 
       - name: Create Temporary AWS Profile
-        # This creates the 'secondary-account' profile Terraform is looking for
-        # and points it to the credentials we just configured.
         run: |
           mkdir -p ~/.aws
-          echo "[profile secondary-account]" > ~/.aws/config
-          echo "region = ap-southeast-1" >> ~/.aws/config
-          echo "output = json" >> ~/.aws/config
+          cat <<EOF > ~/.aws/config
+          [profile secondary-account]
+          region = ap-southeast-1
+          output = json
+          EOF
           
-          echo "[profile secondary-account]" > ~/.aws/credentials
-          echo "aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
-          echo "aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}" >>
+          cat <<EOF > ~/.aws/credentials
+          [profile secondary-account]
+          aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          EOF
 
       - name: Terraform Init & Plan
         env:
