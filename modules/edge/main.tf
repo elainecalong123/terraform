@@ -24,6 +24,7 @@ resource "aws_cloudfront_distribution" "main" {
   comment             = "Gateway for ${var.app_name}"
   price_class         = "PriceClass_All"
   aliases             = [var.domain_name]
+  web_acl_id          = aws_wafv2_web_acl.main.arn
 
   # --- ORIGINS ---
 
@@ -116,5 +117,41 @@ resource "aws_route53_record" "public_alias" {
     name                   = aws_cloudfront_distribution.main.domain_name
     zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
     evaluate_target_health = false
+  }
+}
+
+resource "aws_wafv2_web_acl" "main" {
+  provider = aws.global_region
+  name     = "${var.app_name}-${var.env}-waf"
+  scope    = "CLOUDFRONT"
+
+  default_action {
+    allow {}
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "app-waf-metric"
+    sampled_requests_enabled   = true
+  }
+
+  # Example: AWS Managed Core Rule Set
+  rule {
+    name     = "AWS-AWSManagedRulesCommonRuleSet"
+    priority = 1
+    override_action {
+      none {}
+    }
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "AWSManagedRulesCommonRuleSetMetric"
+      sampled_requests_enabled   = true
+    }
   }
 }

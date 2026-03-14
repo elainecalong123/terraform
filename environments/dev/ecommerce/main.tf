@@ -71,6 +71,11 @@ module "compute" {
 # 6. Edge (CloudFront CDN)
 module "edge" {
   source = "../../../modules/edge"
+
+  providers = {
+      aws.global_region = aws.global_region
+  }
+
   domain_name = var.domain_name
 
   env             = var.env
