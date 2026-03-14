@@ -6,7 +6,7 @@ locals {
   }
 }
 
-# 1. Application Load Balancer
+# 1. Application Load Balancer (external)
 resource "aws_lb" "main" {
   name               = "${var.app_name}-${var.env}-alb"
   internal           = false
