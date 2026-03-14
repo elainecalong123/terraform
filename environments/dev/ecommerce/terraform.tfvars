@@ -1,0 +1,6 @@
+env         = "dev"
+region      = "ap-southeast-1"
+app_name    = "ecommerce"
+domain_name = "shop.cambridgelaine.com"
+vpn_cidr    = "172.16.0.0/22"
+container_image = "nginxdemos/hello:latest"

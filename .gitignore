@@ -1,0 +1,14 @@
+# --- TERRAFORM SPECIFIC ---
+# Ignore the massive provider binaries and module copies
+**/.terraform/
+
+
+# Ignore local state files (State should always be in S3)
+*.tfstate
+*.tfstate.*
+
+# --- SYSTEM & LOGS ---
+.tfplan
+crash.log
+.env
+.DS_Store
