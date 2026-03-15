@@ -28,3 +28,13 @@ variable "redis_cluster_arn" {
   type        = string
   description = "The ARN of the Redis/ElastiCache cluster this app is allowed to access."
 }
+
+variable "aws_account_id" {
+  type        = string
+  description = "The 12-digit AWS Account ID"
+}
+
+variable "db_username" {
+  type        = string
+  description = "The master username for the database"
+}

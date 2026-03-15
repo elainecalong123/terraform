@@ -60,3 +60,7 @@ output "db_resource_id" {
   description = "The RDS Resource ID"
   value       = aws_db_instance.primary.resource_id
 }
+
+output "db_password_secret_arn" {
+  value = aws_secretsmanager_secret.primary_db_secret.arn
+}

@@ -28,3 +28,13 @@ variable "container_image" {
   description = "container image testing"
 }
 
+variable "db_username" {
+  type        = string
+  description = "The master username for the database"
+  default     = "dbadmin"
+}
+
+variable "aws_account_id" {
+  type        = string
+  description = "The 12-digit AWS Account ID"
+}

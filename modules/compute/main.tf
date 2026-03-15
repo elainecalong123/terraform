@@ -65,8 +65,7 @@ resource "aws_lb_target_group" "app" {
     unhealthy_threshold = 3
   }
 }
-
-# 5. ECS Task Definition (UPDATED FOR TLS)
+# 5. ECS Task Definition
 resource "aws_ecs_task_definition" "app" {
   family                   = "${var.app_name}-${var.env}"
   network_mode             = "awsvpc"
@@ -83,14 +82,22 @@ resource "aws_ecs_task_definition" "app" {
       essential = true
       portMappings = [
         {
-          containerPort = 443 # Matching Target Group
+          containerPort = 443
           hostPort      = 443
         }
       ]
+      # 1. FETCH SECRETS FROM SECRETS MANAGER
+      secrets = [
+        {
+          name      = "DB_PASSWORD"
+          valueFrom = var.db_password_secret_arn
+        }
+      ]
+      # 2. STANDARD ENVIRONMENT VARIABLES
       environment = [
         { name = "DB_HOST", value = var.db_host },
+        { name = "DB_USER", value = var.db_username },
         { name = "REDIS_HOST", value = var.redis_host },
-        # FORCING DATABASE TLS CONNECTION
         { name = "DB_SSL_MODE", value = "require" }
       ]
       logConfiguration = {
@@ -133,4 +140,12 @@ resource "aws_ecs_cluster" "this" {
     name  = "containerInsights"
     value = "enabled"
   }
+}
+
+# 8. CloudWatch Log Group (MUST ADD THIS)
+# ECS won't create the log group for you; the task will fail if this is missing.
+resource "aws_cloudwatch_log_group" "app" {
+  name              = "/ecs/${var.app_name}-${var.env}"
+  retention_in_days = 30
+  tags              = local.common_tags
 }

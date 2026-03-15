@@ -62,12 +62,6 @@ variable "db_instance_class" {
   default = "db.t3.medium"
 }
 
-variable "db_password" {
-  type        = string
-  description = "The master password for the database."
-  sensitive   = true
-}
-
 variable "redis_node_type" {
   type    = string
   default = "cache.t3.micro"

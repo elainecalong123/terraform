@@ -74,12 +74,6 @@ variable "db_allocated_storage" {
   default = 20
 }
 
-variable "db_password" {
-  type        = string
-  description = "The master password for the database."
-  sensitive   = true
-}
-
 variable "db_engine" {
   type    = string
   default = "postgres"

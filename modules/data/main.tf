@@ -48,6 +48,7 @@ resource "aws_security_group" "db" {
 # 2. Primary RDS Instance
 resource "aws_db_instance" "primary" {
   identifier           = "${var.app_name}-${var.env}-primary"
+  depends_on = [aws_secretsmanager_secret_version.primary_val]
   allocated_storage    = var.db_allocated_storage
   engine               = var.db_engine
   instance_class       = var.db_instance_class
@@ -60,7 +61,7 @@ resource "aws_db_instance" "primary" {
   multi_az             = var.env == "prod" ? true : false
   db_name              = replace(var.app_name, "-", "_")
   username             = var.db_username
-  password             = var.db_password
+  password = random_password.db_master_pass.result
   iam_database_authentication_enabled = true
   skip_final_snapshot                 = var.env == "prod" ? false : true
   backup_retention_period = var.db_backup_retention_period
@@ -128,7 +129,10 @@ resource "aws_db_instance" "dr_replica" {
   provider               = aws.dr_region
   identifier             = "${var.app_name}-${var.env}-dr-replica"
   replicate_source_db    = aws_db_instance.primary.arn
-  depends_on = [aws_db_instance.primary]
+  depends_on = [
+      aws_db_instance.primary,
+      aws_secretsmanager_secret_version.dr_val
+  ]
   instance_class         = var.db_instance_class
   db_subnet_group_name   = aws_db_subnet_group.db_group_dr.name
   storage_encrypted = true
@@ -240,4 +244,39 @@ resource "aws_db_parameter_group" "postgres_syd" {
       value = parameter.value.value
     }
   }
+}
+
+### password
+
+# 1. Generate the single master password
+resource "random_password" "db_master_pass" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+# 2. Primary Region Secret (Singapore)
+resource "aws_secretsmanager_secret" "primary_db_secret" {
+  name        = "${var.app_name}/${var.env}/db-password"
+  description = "RDS Password for Singapore"
+  tags        = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "primary_val" {
+  secret_id     = aws_secretsmanager_secret.primary_db_secret.id
+  secret_string = random_password.db_master_pass.result
+}
+
+# 3. DR Region Secret (Sydney)
+resource "aws_secretsmanager_secret" "dr_db_secret" {
+  provider    = aws.dr_region
+  name        = "${var.app_name}/${var.env}/db-password"
+  description = "RDS Password for Sydney (Mirrored)"
+  tags        = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "dr_val" {
+  provider      = aws.dr_region
+  secret_id     = aws_secretsmanager_secret.dr_db_secret.id
+  secret_string = random_password.db_master_pass.result
 }

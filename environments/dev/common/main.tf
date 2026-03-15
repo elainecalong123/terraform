@@ -95,7 +95,6 @@ module "data" {
   db_engine               = var.db_engine
   db_instance_class       = var.db_instance_class
   db_username             = var.db_username
-  db_password             = var.db_password
   db_allocated_storage    = var.db_allocated_storage
 
   # Redis Configurations

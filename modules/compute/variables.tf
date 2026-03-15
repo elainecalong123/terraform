@@ -24,3 +24,5 @@ variable "container_image" { type = string }
 variable "container_port" { default = 8080 }
 variable "cpu" { default = 256 }
 variable "memory" { default = 512 }
+variable "db_password_secret_arn" {type = string}
+variable "db_username" {type   = string}

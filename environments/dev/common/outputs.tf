@@ -86,3 +86,8 @@ output "redis_host" {
   description = "The hostname of the RDS dr instance"
   value       = module.data.redis_host
 }
+
+output "db_password_secret_arn" {
+  description = "The ARN of the existing DB password secret"
+  value       = module.data.db_password_secret_arn
+}
